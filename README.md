@@ -1,162 +1,297 @@
 # Titanic Survival Analysis
 
-**Turning 891 rows of passenger data into a clear, evidence-backed story about who survived the Titanic — and why.**
+An exploratory data analysis (EDA) project in Python investigating passenger demographics, socio-economic factors, and key determinants of survival on the RMS Titanic.
 
-![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)
-![Pandas](https://img.shields.io/badge/Pandas-Data%20Wrangling-150458?logo=pandas&logoColor=white)
-![Seaborn](https://img.shields.io/badge/Seaborn-Visualization-4C72B0)
-![Matplotlib](https://img.shields.io/badge/Matplotlib-Plotting-11557C)
-![Jupyter](https://img.shields.io/badge/Jupyter-Notebook-F37626?logo=jupyter&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
-![Status](https://img.shields.io/badge/Build-Passing-brightgreen)
+![Sample Output - Survival Rate by Class and Gender](screenshots/survival_rate_by_class_and_gender.png)
 
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Architecture / How It Works](#architecture--how-it-works)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Folder Structure](#folder-structure)
-- [Contributing](#contributing)
+- [Dataset Schema & Structure](#dataset-schema--structure)
+- [Tech Stack & Requirements](#tech-stack--requirements)
+- [Getting Started](#getting-started)
+- [Features & Operations Covered](#features--operations-covered)
+- [Sample Analysis & Real Output](#sample-analysis--real-output)
+  - [1. Overall Survival Rate](#1-overall-survival-rate)
+  - [2. Survival Analysis by Gender](#2-survival-analysis-by-gender)
+  - [3. Survival Analysis by Passenger Class](#3-survival-analysis-by-passenger-class)
+  - [4. Survival Analysis by Age Group](#4-survival-analysis-by-age-group)
+  - [5. Passenger Age Distribution](#5-passenger-age-distribution)
+  - [6. Multivariate Analysis: Class and Gender Interaction](#6-multivariate-analysis-class-and-gender-interaction)
+  - [7. Summary of Findings](#7-summary-of-findings)
+- [Assumptions Made](#assumptions-made)
+- [Project Structure](#project-structure)
+- [Author](#author)
 - [License](#license)
-- [Author / Contact](#author--contact)
 
 ---
 
 ## Overview
 
-The Titanic dataset is one of the most widely referenced datasets in data science, but most public notebooks that use it stop at surface-level charts without explaining the reasoning behind each cleaning decision or drawing conclusions that hold up to scrutiny. This project treats the dataset the way a working analyst would treat a real business dataset: audit it, clean it deliberately, document every transformation, and only then move to interpretation. The goal is not just to produce plots, but to answer a specific question — which factors most strongly predicted survival on the Titanic — using a reproducible, well-reasoned workflow. Every step, from handling missing `Age` and `Embarked` values to bucketing passengers into age groups, is done with a stated rationale rather than a default pandas call. The end result is a notebook that reads less like an exercise and more like a short analytical report, which is exactly the standard this project holds itself to.
+The **Titanic Survival Analysis** project performs an exploratory data analysis (EDA) on the Titanic passenger dataset (`train.csv`). The primary objective is to clean the raw passenger data, handle missing values, engineer demographic cohorts (`AgeGroup`), and analyze the relationship between passenger attributes (such as gender, socio-economic class, and age) and their likelihood of survival during the maritime disaster.
 
-## Features
+---
 
-- **Structural data audit** — Uses `.info()`, `.shape`, `.describe()`, and `.columns` to fully understand the dataset's shape, types, and distributions before any cleaning begins, rather than jumping straight into transformations.
-- **Deliberate missing-data strategy** — The `Cabin` column is dropped outright due to its high proportion of missing values, `Age` is imputed with the column mean to preserve sample size, and the two rows missing `Embarked` are dropped since imputing a categorical port of origin would introduce more noise than value.
-- **Duplicate and consistency checks** — Explicitly verifies there are no duplicate rows and inspects the unique values in categorical fields like `Sex` to catch encoding issues before they silently affect results.
-- **Survival rate breakdowns** — Computes precise survival percentages overall, and segmented by gender and passenger class, giving quantitative backing to every visual claim instead of relying on the chart alone.
-- **Age-group binning** — Converts continuous `Age` values into meaningful categories (Child, Teen, Young Adult, Adult, Senior) using `pd.cut`, making age-based survival trends interpretable at a glance rather than buried in a scatter of raw numbers.
-- **Multi-variable visualization** — Goes beyond single-factor analysis with a combined class-and-gender survival plot, surfacing interaction effects (e.g., first-class women vs. third-class men) that single-variable charts miss entirely.
-- **Distribution analysis** — Includes a KDE-overlaid histogram of passenger age to characterize the underlying population, not just the outcome variable.
-- **Narrative conclusions** — Closes with a written summary that ties every chart back to a real historical explanation (the "women and children first" protocol), grounding the statistics in context instead of leaving them to speak for themselves.
+## Dataset Schema & Structure
 
-## Tech Stack
+The dataset contains initial records for 891 passengers across 12 features.
 
-- **Python** was chosen as the base language because it remains the standard for data analysis work, with a mature ecosystem and syntax that keeps the focus on the data rather than boilerplate.
-- **Pandas** handles all data loading, cleaning, and aggregation. It was chosen over raw Python data structures because operations like `groupby`, `fillna`, and `dropna` express cleaning logic in a single readable line instead of manual loops, which matters when every transformation needs to be auditable.
-- **NumPy** underpins the numerical operations pandas relies on and is used directly where explicit array-level operations are clearer than a pandas equivalent.
-- **Matplotlib** provides the low-level plotting control needed to set precise figure sizes, titles, and axis labels — details that make the difference between a chart that's readable and one that isn't.
-- **Seaborn** is layered on top of Matplotlib for the statistical plots (`countplot`, `barplot`, `histplot`) because it produces cleaner default aesthetics and handles categorical grouping (via `hue`) with far less code than Matplotlib alone.
-- **Jupyter Notebook** was the natural choice for this project's format since analysis work benefits from interleaving code, output, and commentary in one linear, inspectable document — exactly how the conclusions in this project were derived and should be reviewed.
+### Original Feature Schema
 
-## Architecture / How It Works
+| Column Name | Data Type | Null Count (Raw) | Description | Preprocessing Action |
+| :--- | :--- | :--- | :--- | :--- |
+| `PassengerId` | `int64` | 0 | Unique identifier for each passenger | Kept as index/identifier |
+| `Survived` | `int64` | 0 | Target variable: Survival indicator (`0 = No`, `1 = Yes`) | Target variable |
+| `Pclass` | `int64` | 0 | Ticket class / Socio-economic status (`1 = 1st`, `2 = 2nd`, `3 = 3rd`) | Kept as categorical factor |
+| `Name` | `object` | 0 | Full passenger name and title | Kept intact |
+| `Sex` | `object` | 0 | Passenger gender (`male`, `female`) | Primary demographic feature |
+| `Age` | `float64` | 177 | Passenger age in years | Missing values imputed with mean (`~29.70`) |
+| `SibSp` | `int64` | 0 | Number of siblings / spouses aboard | Kept intact |
+| `Parch` | `int64` | 0 | Number of parents / children aboard | Kept intact |
+| `Ticket` | `object` | 0 | Ticket number string | Kept intact |
+| `Fare` | `float64` | 0 | Passenger fare amount paid | Kept intact |
+| `Cabin` | `object` | 687 | Cabin allocation number | Dropped due to >77% missing records |
+| `Embarked` | `object` | 2 | Port of embarkation (`C = Cherbourg`, `Q = Queenstown`, `S = Southampton`) | 2 missing rows dropped |
 
-The notebook follows a linear, four-stage pipeline, and each stage only begins once the previous one is verified complete:
+### Engineered Features
 
-1. **Ingest** — The raw `train.csv` file (the classic Kaggle Titanic training set) is loaded into a pandas DataFrame.
-2. **Audit & Clean** — The DataFrame is inspected for shape, types, and nulls. Based on that audit, `Cabin` is dropped, `Age` nulls are mean-imputed, `Embarked` nulls are row-dropped, and duplicate rows are confirmed absent. Each decision is made independently based on how much signal that column contributes versus how much missing data it carries.
-3. **Feature Derivation** — A new `AgeGroup` categorical feature is derived from the continuous `Age` column using fixed bin edges, enabling group-level survival comparisons that raw ages can't provide directly.
-4. **Analysis & Visualization** — Survival rate is computed overall and sliced by `Sex`, `Pclass`, and `AgeGroup`, with each numerical breakdown paired with a corresponding Seaborn visualization. The notebook closes by cross-tabulating `Pclass` and `Sex` together against survival to capture interaction effects that single-variable analysis would miss, then synthesizes all findings into a written conclusion.
+| Feature Name | Derived From | Bins / Categories | Description |
+| :--- | :--- | :--- | :--- |
+| `AgeGroup` | `Age` | `[0, 12]`: **Child**<br>`(12, 18]`: **Teen**<br>`(18, 35]`: **Young Adult**<br>`(35, 60]`: **Adult**<br>`(60, 80]`: **Senior** | Categorical age binning created via `pd.cut()` to assess survival across life stages. |
 
-Because each stage depends on the output of the one before it, running the notebook top to bottom reproduces the full analysis deterministically — there are no hidden branches or out-of-order cell dependencies.
+---
 
-## Installation
+## Tech Stack & Requirements
 
+- **Programming Language**: Python 3.9+
+- **Environment**: Jupyter Notebook / JupyterLab
+- **Core Libraries**:
+  - `pandas` - Data manipulation, cleaning, aggregation, and binning
+  - `numpy` - Numerical computations
+  - `matplotlib` - Figure formatting, titles, and layout configuration
+  - `seaborn` - Statistical data visualizations (count plots, bar plots, distribution histograms with KDE)
+
+---
+
+## Getting Started
+
+### 1. Clone the Repository
 ```bash
-# 1. Clone the repository
-git clone https://github.com/your-username/titanic-survival-analysis.git
+git clone https://github.com/rudhiyansh/titanic-survival-analysis.git
 cd titanic-survival-analysis
-
-# 2. Create and activate a virtual environment
-python -m venv venv
-source venv/bin/activate      # On Windows: venv\Scripts\activate
-
-# 3. Install dependencies
-pip install pandas numpy matplotlib seaborn jupyter
-
-# 4. Launch the notebook
-jupyter notebook titanic_survival_analysis.ipynb
 ```
 
-The dataset itself (`train.csv`) is the standard Kaggle Titanic training set. Download it from the [Kaggle Titanic competition page](https://www.kaggle.com/c/titanic/data) and place it in a `data/` folder in the project root, then update the file path in the first code cell to match.
+### 2. Set Up Virtual Environment (Optional but Recommended)
+```bash
+python -m venv venv
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+```
 
-## Usage
+### 3. Install Dependencies
+```bash
+pip install pandas numpy matplotlib seaborn notebook
+```
 
-Once the notebook is running, execute the cells sequentially. A few representative examples of what each stage outputs:
+### 4. Ensure Dataset Location
+Place `train.csv` in the root project directory (or adjust the path in Cell 1 of the notebook):
+```python
+df = pd.read_csv("train.csv")
+```
 
-**Checking overall survival rate:**
+### 5. Launch Jupyter Notebook
+```bash
+jupyter notebook "titanic survival analysis (1).ipynb"
+```
+Run all cells sequentially from top to bottom (`Cell` -> `Run All`).
+
+---
+
+## Features & Operations Covered
+
+| Task / Operation | Description | Implementation in Notebook |
+| :--- | :--- | :--- |
+| **Data Ingestion & Inspection** | Load CSV file and inspect schema, data types, dimensions, and statistical summaries. | Cells 0–7 (`pd.read_csv`, `df.info()`, `df.shape`, `df.columns.tolist()`, `df.describe()`) |
+| **Feature Removal** | Drop high-cardinality/sparse `Cabin` column with excessive nulls. | Cell 9 (`df.drop(columns="Cabin", inplace=True)`) |
+| **Null Value Audit** | Verify missing values across all columns. | Cells 11, 14, 17 (`df.isnull().sum()`) |
+| **Imputation** | Fill 177 missing `Age` values using the column arithmetic mean. | Cell 13 (`df["Age"].fillna(df["Age"].mean())`) |
+| **Row-Level Cleaning** | Remove records with missing `Embarked` values (2 rows removed; remaining `N = 889`). | Cell 16 (`df.dropna(subset="Embarked")`) |
+| **Duplicate Verification** | Verify uniqueness across records. | Cell 19 (`df.duplicated().sum()`) |
+| **Overall Survival Rate** | Compute aggregate percentage of passengers surviving the disaster. | Cells 23–24 (`survival_rate = df["Survived"].mean() * 100`) |
+| **Gender-Based Analysis** | Calculate survival rate by gender and visualize survivor/non-survivor counts. | Cell 26 (`df.groupby("Sex")["Survived"].mean() * 100`, `sns.countplot`) |
+| **Class-Based Analysis** | Compute survival percentages across 1st, 2nd, and 3rd passenger classes and visualize. | Cell 28 (`df.groupby("Pclass")["Survived"].mean() * 100`, `sns.countplot`) |
+| **Demographic Binning** | Construct categorical `AgeGroup` variable using 5 defined intervals. | Cell 30 (`pd.cut()`) |
+| **Age-Group Survival Analysis** | Calculate survival rate across age brackets and generate count visualization. | Cell 30 (`df.groupby("AgeGroup")["Survived"].mean() * 100`, `sns.countplot`) |
+| **Age Distribution Plotting** | Visualize overall passenger age frequency using a 20-bin histogram with KDE overlay. | Cell 32 (`sns.histplot(x=df["Age"], bins=20, kde=True)`) |
+| **Multivariate Class × Sex Analysis** | Bar plot comparing survival probability by passenger class partitioned by gender. | Cell 34 (`sns.barplot(data=df, x="Pclass", y="Survived", hue="Sex")`) |
+| **Summary & Findings** | Print final analytical conclusions in the terminal/cell output. | Cell 36 (`print()`) |
+
+---
+
+## Sample Analysis & Real Output
+
+### 1. Overall Survival Rate
 
 ```python
 survival_rate = df["Survived"].mean() * 100
-print(f"Overall survival rate: {survival_rate:.2f}%")
-```
-```
-Overall survival rate: 40.19%
+print(f"Overall survival rate : {survival_rate:.2f}")
 ```
 
-**Survival rate by gender:**
+**Output:**
+```text
+Overall survival rate : 38.25
+```
+
+---
+
+### 2. Survival Analysis by Gender
 
 ```python
+print("Survival Rate by Gender")
 print(df.groupby("Sex")["Survived"].mean() * 100)
 ```
-```
+
+**Output:**
+```text
+Survival Rate by Gender
 Sex
-female    74.20
-male      18.89
+female    74.038462
+male      18.890815
 Name: Survived, dtype: float64
 ```
 
-**Deriving age groups and comparing survival:**
+![Survival Rate by Gender](screenshots/survival_rate_by_gender.png)
+
+---
+
+### 3. Survival Analysis by Passenger Class
+
+```python
+print("Survived Rate by Passenger Class")
+print(df.groupby("Pclass")["Survived"].mean() * 100)
+```
+
+**Output:**
+```text
+Survived Rate by Passenger Class
+Pclass
+1    62.616822
+2    47.282609
+3    24.236253
+Name: Survived, dtype: float64
+```
+
+![Survival Count by Passenger Class](screenshots/survival_count_by_class.png)
+
+---
+
+### 4. Survival Analysis by Age Group
 
 ```python
 bins = [0, 12, 18, 35, 60, 80]
 labels = ["Child", "Teen", "Young Adult", "Adult", "Senior"]
 df["AgeGroup"] = pd.cut(df["Age"], bins=bins, labels=labels)
 
+print("Survival Rate by Age Group")
 print(df.groupby("AgeGroup", observed=True)["Survived"].mean() * 100)
 ```
 
-Each analytical cell is immediately followed by a Seaborn visualization (`countplot` or `barplot`) so the numeric result and its visual counterpart are always presented together — the numbers justify the chart, and the chart makes the numbers intuitive.
-
-## Folder Structure
-
+**Output:**
+```text
+Survival Rate by Age Group
+AgeGroup
+Child          57.971014
+Teen           42.857143
+Young Adult    35.327103
+Adult          39.690722
+Senior         19.047619
+Name: Survived, dtype: float64
 ```
+
+![Survival Count by Age Group](screenshots/survival_count_by_age_group.png)
+
+---
+
+### 5. Passenger Age Distribution
+
+```python
+plt.figure(figsize=(10, 6))
+sns.histplot(x=df["Age"], bins=20, kde=True)
+plt.title("Distribution of Passenger Age")
+plt.xlabel("Age")
+plt.ylabel("Number of Passenger")
+plt.show()
+```
+
+![Distribution of Passenger Age](screenshots/passenger_age_distribution.png)
+
+---
+
+### 6. Multivariate Analysis: Class and Gender Interaction
+
+```python
+plt.figure(figsize=(10, 6))
+sns.barplot(data=df, x="Pclass", y="Survived", hue="Sex")
+plt.title("Survival Rate by Class and Gender")
+plt.xlabel("Passenger Class")
+plt.ylabel("Survival Rate")
+plt.show()
+```
+
+![Survival Rate by Class and Gender](screenshots/survival_rate_by_class_and_gender.png)
+
+---
+
+### 7. Summary of Findings
+
+```text
+         ----- Summary of Findings -----          
+
+1. Females had a much higher survival rate by males.
+2. 1st Class passenger survived more than 2nd and 3rd class.
+3. Children has a relatively better survival rate than adults.
+
+This matches the 'woman and children first' policy followed during disaster.
+```
+
+---
+
+## Assumptions Made
+
+- **Age Imputation**: Missing passenger ages (177 instances) were imputed using the global arithmetic mean (`~29.70` years) rather than group-specific (e.g. title/class-based) medians.
+- **Cabin Exclusion**: The `Cabin` attribute was dropped entirely because over 77% of rows lacked records (687 missing out of 891).
+- **Missing Embarkation Handling**: The 2 passenger records with missing `Embarked` values were dropped via listwise deletion, leaving 889 records for analysis.
+- **Age Interval Partitioning**: Age categories were defined using right-inclusive intervals: Child `(0, 12]`, Teen `(12, 18]`, Young Adult `(18, 35]`, Adult `(35, 60]`, and Senior `(60, 80]`.
+
+---
+
+## Project Structure
+
+```text
 titanic-survival-analysis/
-│
-├── data/
-│   └── train.csv                    # Raw Kaggle Titanic dataset (not committed)
-│
-├── titanic_survival_analysis.ipynb  # Main analysis notebook
-├── README.md                        # Project documentation
-├── requirements.txt                 # Pinned dependency versions
-└── LICENSE                          # MIT License
+├── README.md
+├── titanic survival analysis (1).ipynb
+├── train.csv
+└── screenshots/
+    ├── passenger_age_distribution.png
+    ├── survival_count_by_age_group.png
+    ├── survival_count_by_class.png
+    ├── survival_rate_by_class_and_gender.png
+    └── survival_rate_by_gender.png
 ```
 
-## Contributing
+---
 
-Contributions are welcome, particularly around extending the analysis with additional cleaning strategies or new segment comparisons. To contribute:
+## Author
 
-1. Fork the repository and create a feature branch (`git checkout -b feature/fare-vs-survival`).
-2. Keep each analytical addition in its own notebook cell with a preceding markdown cell explaining the question it answers — this project's core value is that every step is explainable, and new contributions should hold to that same standard.
-3. If you change an existing cleaning decision (for example, using median instead of mean imputation for `Age`), state the reasoning in a markdown cell rather than silently swapping the method.
-4. Run the full notebook top to bottom before submitting to confirm there are no broken cell dependencies.
-5. Open a pull request with a clear description of what was added or changed and why it improves the analysis.
-6. Keep visualizations consistent with the existing style (figure size `(10,6)`, titled axes, and a labeled legend) so the notebook reads as one coherent document rather than a patchwork of styles.
+- **GitHub**: [@rudhiyansh](https://github.com/rudhiyansh)
 
-Issues and suggestions are just as valuable as code — if you spot a flawed assumption in the existing analysis, opening an issue with your reasoning is genuinely useful.
+---
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details. You are free to use, modify, and distribute this work with attribution.
-
-## Author / Contact
-
-**Rudhiyansh Vijay Sandanshiv**
-
-Data analysis enthusiast building a portfolio of well-reasoned, reproducible EDA projects on the path toward a data analyst career.
-
-- GitHub: [github.com/your-username](https://github.com/your-rudhiyansh)
-
-If this analysis was useful or you spot something worth discussing, feel free to open an issue or reach out directly.
+This project is open-source and available under the [MIT License](LICENSE).
